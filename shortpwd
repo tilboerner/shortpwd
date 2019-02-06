@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Print the path of the working directory with long dirnames shortened.
 
@@ -83,7 +84,7 @@ def _abbrev(name, maxlen):
     _debug('abbrev', name=name, maxlen=maxlen)
     right_count = int(available / 2)
     left_count = available - right_count
-    return name[:left_count] + ABBREV + name[len(name) - right_count:]
+    return name[:left_count] + ABBREV + name[len(name) - right_count :]
 
 
 def _find_unique_prefix(path, maxlen):
@@ -101,9 +102,9 @@ def _find_unique_prefix(path, maxlen):
     _debug('unique', name=name, maxlen=maxlen)
     siblings = list(_yield_sibling_names(path))
     assert name not in siblings
-    sibling_prefixes = set(chain.from_iterable(
-        _prefixes(s, maxlen=namelen) for s in siblings
-    ))
+    sibling_prefixes = set(
+        chain.from_iterable(_prefixes(s, maxlen=namelen) for s in siblings)
+    )
     for prefix in _prefixes(name):
         if len(prefix) + len(ABBREV) >= namelen:
             return name
@@ -145,7 +146,7 @@ if __name__ == '__main__':
     cwd = os.getcwd()
     home = os.path.expanduser('~')
     if cwd.startswith(home):
-        cwd = '~' + cwd[len(home):]
+        cwd = '~' + cwd[len(home) :]
     if len(cwd) > SHRINK_PATHS_BEYOND_LENGTH:
         orig = cwd
         try:
