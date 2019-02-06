@@ -48,17 +48,18 @@ def _shorten_parts(target_path):
     for i, path in enumerate(paths):
         distance_from_end = min(i, last_index - i)
         if distance_from_end == 0:
-            yield path.name or path.anchor
+            # don't shorten; '/' has no name, '.' also has no anchor
+            yield path.name or path.anchor or str(path)
         else:
             yield _shorten_name(path)
 
 
 def _shorten_name(path):
     maxlen = SHRINK_NAMES_BEYOND_LENGTH
-    anchor, name = path.anchor, path.name
-    is_root_path = anchor and not name and path.parent == path
-    if is_root_path:
-        return anchor
+    name = path.name
+    is_root_or_dot_path = not name and path.parent == path
+    if is_root_or_dot_path:
+        return path.anchor or str(path)  # '.' has no name or anchor
     if maxlen is None or len(name) <= maxlen or name == '~':
         return name
     return _find_unique_prefix(path, maxlen) or _abbrev(name, maxlen)
