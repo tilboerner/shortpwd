@@ -1,7 +1,14 @@
 #!/usr/bin/env python
-from __future__ import division
+"""
+Print the path of the working directory with long dirnames shortened.
 
-"""Print the name of the working directory with long dirnames shortened."""
+If the whole path exceeds a certain length, it will be shortened by trimming
+the individual directory names that form its path, by reducing them to a unique
+prefix within their parent directory, or, failing that, by just cutting out
+their middle part.
+"""
+
+from __future__ import division
 
 import logging
 import os
@@ -12,13 +19,23 @@ from itertools import chain, zip_longest
 log = logging.getLogger(__name__)
 
 DEBUG = False
+"""Print debugging information to stderr."""
+
 ABBREV = '…'
-SHRINK_AT_TOTAL_LENGTH = 20
-SHRINK_AT_PART_LENGTH = 4
-PART_MIN_LENGTH = 2
+"""Replacement to use when shortening names"""
+
+SHRINK_PATHS_BEYOND_LENGTH = 20
+"""Paths shorter than this will not be shortened."""
+
+SHRINK_NAMES_BEYOND_LENGTH = 4
+"""When shortening a path, only shrink names which are longer than this."""
+
+MIN_NAME_LENGTH = 2
+"""When shortening a path, don't shrink individual names to less than this."""
 
 
 def shorten(path):
+    """Shorten a path by trimming the directory names it's made of."""
     path = pathlib.Path(path)
     return os.path.join(*(_shorten_parts(path)))
 
@@ -49,7 +66,7 @@ def _shorten_parts(path):
 
 
 def _shorten_name(path):
-    maxlen = SHRINK_AT_PART_LENGTH
+    maxlen = SHRINK_NAMES_BEYOND_LENGTH
     anchor, name = path.anchor, path.name
     namelen = len(name)
     if anchor and not name and path.parent == path:  # root path
@@ -61,7 +78,8 @@ def _shorten_name(path):
 
 
 def _abbrev(name, maxlen):
-    available = max(PART_MIN_LENGTH, maxlen - len(ABBREV))
+    """Trim name by replacing its middle by an abbreviation string."""
+    available = max(MIN_NAME_LENGTH, maxlen - len(ABBREV))
     _debug('abbrev', name=name, maxlen=maxlen)
     right_count = int(available / 2)
     left_count = available - right_count
@@ -69,6 +87,15 @@ def _abbrev(name, maxlen):
 
 
 def _find_unique_prefix(path, maxlen):
+    """Get shortest unique prefix of the pathname in its parent directory.
+
+    For example, for `/path/to/some_name`, it will return the shortest prefix
+    if `some_name` that is not shared by any other entry in the `/path/to`
+    directory.
+
+    Returns:
+        The shortest prefix + the abbreviation string, or `None`.
+    """
     name = path.name
     namelen = len(name)
     _debug('unique', name=name, maxlen=maxlen)
@@ -85,6 +112,7 @@ def _find_unique_prefix(path, maxlen):
 
 
 def _yield_sibling_names(path):
+    """Yield the names of other entries in the parent directory of a path"""
     path = path.expanduser()
     if path.parent.name == '.':
         return
@@ -101,7 +129,7 @@ def _prefixes(string, minlen=None, maxlen=None):
     assert minlen is None or minlen >= 0
     strlen = len(string)
     maxlen = maxlen or strlen
-    minlen = minlen or max(1, SHRINK_AT_PART_LENGTH - len(ABBREV))
+    minlen = minlen or max(1, SHRINK_NAMES_BEYOND_LENGTH - len(ABBREV))
     minlen = min(minlen, maxlen)
     return (string[:n] for n in range(minlen, maxlen))
 
@@ -118,12 +146,12 @@ if __name__ == '__main__':
     home = os.path.expanduser('~')
     if cwd.startswith(home):
         cwd = '~' + cwd[len(home):]
-    if len(cwd) > SHRINK_AT_TOTAL_LENGTH:
+    if len(cwd) > SHRINK_PATHS_BEYOND_LENGTH:
         orig = cwd
         try:
             cwd = shorten(cwd)
         except Exception:
-            log.exception('')
+            log.exception('Error shrinking path %r', cwd)
         if DEBUG:
             cwdlen, origlen = len(cwd), len(orig)
             cwd = f'{cwd}|{cwdlen}|{cwdlen/origlen:.2}'
