@@ -15,7 +15,6 @@ import logging
 import os
 import pathlib
 import sys
-from itertools import chain
 
 log = logging.getLogger(__name__)
 
@@ -85,41 +84,21 @@ def _find_unique_prefix(path, maxlen):
         The shortest prefix + the abbreviation string, or `None`.
     """
     name = path.name
-    namelen = len(name)
     _debug('unique', name=name, maxlen=maxlen)
-    siblings = list(_yield_sibling_names(path))
-    assert name not in siblings
-    sibling_prefixes = set(
-        chain.from_iterable(_prefixes(s, maxlen=namelen) for s in siblings)
-    )
-    for prefix in _prefixes(name):
-        if len(prefix) + len(ABBREV) >= namelen:
-            return name
-        if prefix not in sibling_prefixes:
-            return prefix + ABBREV
-
-
-def _yield_sibling_names(path):
-    """Yield the names of other entries in the parent directory of a path"""
-    path = path.expanduser()
-    if path.parent.name == '.':
+    if not path.parent or path.parent == path:
         return
-    is_dir = None
-    if path.exists():
-        is_dir = path.is_dir()
-        name = path.name
-    for entry in os.scandir(path.parent):
-        if (is_dir is None or entry.is_dir() == is_dir) and entry.name != name:
-            yield entry.name
-
-
-def _prefixes(string, minlen=None, maxlen=None):
-    assert minlen is None or minlen >= 0
-    strlen = len(string)
-    maxlen = maxlen or strlen
-    minlen = minlen or max(1, SHRINK_NAMES_BEYOND_LENGTH - len(ABBREV))
-    minlen = min(minlen, maxlen)
-    return (string[:n] for n in range(minlen, maxlen))
+    try:
+        siblings = {
+            entry.name for entry in os.scandir(path.parent) if entry.name != name
+        }
+    except OSError as error:
+        log.debug(error)
+        return
+    minlen = min(MIN_NAME_LENGTH, maxlen)
+    prefixes = (name[:n] for n in range(minlen, maxlen))
+    for prefix in prefixes:
+        if not any(sibling.startswith(prefix) for sibling in siblings):
+            return name if (prefix == name) else prefix + ABBREV
 
 
 def _debug(*a, **kw):
