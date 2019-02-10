@@ -89,10 +89,12 @@ def _find_unique_prefix(path, maxlen):
         return
     try:
         siblings = {
-            entry.name for entry in os.scandir(path.parent) if entry.name != name
+            entry.name
+            for entry in os.scandir(os.path.expanduser(path.parent))
+            if entry.name != name
         }
     except OSError as error:
-        log.debug(error)
+        _debug(error)
         return
     minlen = min(MIN_NAME_LENGTH, maxlen)
     prefixes = (name[:n] for n in range(minlen, maxlen))
