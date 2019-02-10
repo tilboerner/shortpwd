@@ -27,11 +27,14 @@ ABBREV = '…'
 SHRINK_PATHS_BEYOND_LENGTH = 20
 """Paths shorter than this will not be shortened."""
 
-SHRINK_NAMES_BEYOND_LENGTH = 4
-"""When shortening a path, only shrink names which are longer than this."""
-
 MIN_NAME_LENGTH = 3
 """When shortening a path, don't shrink individual names to less than this."""
+
+MIN_NAME_ABBREV_LENGTH = MIN_NAME_LENGTH + len(ABBREV)
+"""The minimum length of a name including abbreviation marks."""
+
+MAX_NAME_LENGTH = MIN_NAME_ABBREV_LENGTH
+"""When shortening a path, only shrink names which are longer than this."""
 
 
 def shorten(path):
@@ -54,7 +57,7 @@ def _shorten_parts(target_path):
 
 
 def _shorten_name(path):
-    maxlen = SHRINK_NAMES_BEYOND_LENGTH
+    maxlen = MAX_NAME_LENGTH
     name = path.name
     is_root_or_dot_path = not name and path.parent == path
     if is_root_or_dot_path:
@@ -66,7 +69,8 @@ def _shorten_name(path):
 
 def _abbrev(name, maxlen):
     """Trim name by replacing its middle by an abbreviation string."""
-    available = max(0, MIN_NAME_LENGTH, maxlen - len(ABBREV))
+    maxlen = maxlen or len(name)
+    available = max(1, MIN_NAME_LENGTH, maxlen - len(ABBREV))
     _debug('abbrev', name=name, maxlen=maxlen)
     right_count = int(available / 2)
     left_count = available - right_count
@@ -84,6 +88,9 @@ def _find_unique_prefix(path, maxlen):
         The shortest prefix + the abbreviation string, or `None`.
     """
     name = path.name
+    minlen = max(1, MIN_NAME_LENGTH)
+    maxlen = min(maxlen, len(name)) if maxlen else len(name)
+    available = max(minlen, maxlen - len(ABBREV))
     _debug('unique', name=name, maxlen=maxlen)
     if not path.parent or path.parent == path:
         return
@@ -96,11 +103,11 @@ def _find_unique_prefix(path, maxlen):
     except OSError as error:
         _debug(error)
         return
-    minlen = min(MIN_NAME_LENGTH, maxlen)
-    prefixes = (name[:n] for n in range(minlen, maxlen))
+    prefixes = (name[:n] for n in range(minlen, available + 1))
     for prefix in prefixes:
         if not any(sibling.startswith(prefix) for sibling in siblings):
-            return name if (prefix == name) else prefix + ABBREV
+            abbrev = prefix + ABBREV
+            return name if (len(abbrev) >= len(name)) else abbrev
 
 
 def _debug(*a, **kw):
