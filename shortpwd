@@ -30,7 +30,7 @@ SHRINK_PATHS_BEYOND_LENGTH = 20
 SHRINK_NAMES_BEYOND_LENGTH = 4
 """When shortening a path, only shrink names which are longer than this."""
 
-MIN_NAME_LENGTH = 2
+MIN_NAME_LENGTH = 3
 """When shortening a path, don't shrink individual names to less than this."""
 
 
